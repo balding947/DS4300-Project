@@ -26,6 +26,7 @@ from typing import Callable, Optional, Sequence
 from bench.cli import parse, parser, writer_from_args
 from bench.results import ResultsWriter
 from bench.timing import build_memory_bytes, time_batch, time_build
+from datagen.synthetic import point_queries
 from indexes import ALL_INDEXES, make_index
 from loaders.spotify import key_value_pairs, load_tracks
 
@@ -68,9 +69,50 @@ def example_point_lookups(writer: ResultsWriter, tracks: list[dict], reps: int) 
             print(f"  n={n:>7,}  {name:<14} done", flush=True)
 
 
+E2_SIZES = (1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 114_000)
+E2_N_QUERIES = 500
+
+
+def E2_point_lookups(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
+    """Point-lookup cost on track_id as n grows, for hits (rate 1.0) and misses (rate 0.0)."""
+    pairs = key_value_pairs(tracks, "track_id")  # file order
+    # track_id repeats (a song listed in several genres), so n_keys counts inserted pairs, not distinct ids.
+
+    for n in E2_SIZES:
+        subset = pairs[:n]
+        keys = [key for key, _ in subset]
+
+        # Generate each query list once per size, before any timer starts.
+        # Every index and every replicate sees the same queries.
+        queries_by_rate = {
+            rate: point_queries(keys, E2_N_QUERIES, rate, seed=SEED + n)
+            for rate in (1.0, 0.0)
+        }
+
+        for name in ALL_INDEXES:
+            for rep in range(reps):
+                index = make_index(name)  # fresh index every replicate
+                for key, value in subset:  # build is NOT timed here (E1 measures build)
+                    index.insert(key, value)
+
+                for rate, queries in queries_by_rate.items():
+                    index.reset_stats()  # zero the counters so this batch's counts are its own
+                    ns = time_batch(index.search, queries)
+                    writer.record(
+                        index,
+                        experiment="E2_point_lookups", dataset="spotify", key_column="track_id",
+                        insert_order="file", n_keys=n,
+                        operation="point_hit" if rate == 1.0 else "point_miss",
+                        operation_param=rate, n_ops=len(queries), rep=rep, total_ns=ns,
+                        height=index.structure_info().get("height", ""),
+                    )
+            print(f"  E2 n={n:>7,}  {name:<14} done", flush=True)
+
+
 # Register experiments here: name -> function(writer, tracks, reps).
 EXPERIMENTS: dict[str, Callable[[ResultsWriter, list[dict], int], None]] = {
     "example": example_point_lookups,
+    "E2_point_lookups": E2_point_lookups,
 }
 
 
