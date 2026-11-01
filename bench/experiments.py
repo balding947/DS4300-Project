@@ -26,7 +26,7 @@ from typing import Callable, Optional, Sequence
 from bench.cli import parse, parser, writer_from_args
 from bench.results import ResultsWriter
 from bench.timing import build_memory_bytes, time_batch, time_build
-from datagen.synthetic import point_queries
+from datagen.synthetic import arrange, point_queries, random_keys
 from indexes import ALL_INDEXES, make_index
 from loaders.spotify import key_value_pairs, load_tracks
 
@@ -109,10 +109,82 @@ def E2_point_lookups(writer: ResultsWriter, tracks: list[dict], reps: int) -> No
             print(f"  E2 n={n:>7,}  {name:<14} done", flush=True)
 
 
+
+E1_SIZES = (1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 114_000)
+
+
+def E1_build_memory(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
+    """Build cost and memory on track_id (file order) as n grows."""
+    pairs = key_value_pairs(tracks, "track_id")  # file order
+
+    for n in E1_SIZES:
+        subset = pairs[:n]
+
+        for name in ALL_INDEXES:
+            # Memory is measured once per configuration; tracing is slow, so it is never timed.
+            memory = build_memory_bytes(lambda: make_index(name), subset)
+
+            for rep in range(reps):
+                index = make_index(name)  # fresh index every replicate
+                ns = time_build(index, subset)
+                writer.record(
+                    index,
+                    experiment="E1_build_memory", dataset="spotify", key_column="track_id",
+                    insert_order="file", n_keys=n, operation="build", operation_param="",
+                    n_ops=n, rep=rep, total_ns=ns, memory_bytes=memory,
+                    height=index.structure_info().get("height", ""),
+                )
+            print(f"  E1 n={n:>7,}  {name:<14} done", flush=True)
+
+
+E5_SIZES = (1_000, 10_000, 100_000)
+E5_ORDERS = ("random", "sorted", "reversed", "nearly_sorted")
+E5_N_QUERIES = 500
+
+
+def E5_insert_order(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
+    """Does insertion order matter? Synthetic string keys, four arrival orders."""
+    for n in E5_SIZES:
+        keys = random_keys(n, length=8, seed=SEED + n)
+        # The same hit queries for every order, so lookup times are comparable across orders.
+        queries = point_queries(keys, E5_N_QUERIES, 1.0, seed=SEED + n)
+
+        for order in E5_ORDERS:
+            arranged = arrange(keys, order, seed=SEED + n)
+            pairs = [(key, i) for i, key in enumerate(arranged)]
+
+            for name in ALL_INDEXES:
+                for rep in range(reps):
+                    common = dict(
+                        experiment="E5_insert_order", dataset="synthetic",
+                        key_column="random_str8", insert_order=order, n_keys=n, rep=rep,
+                    )
+
+                    index = make_index(name)  # fresh index every replicate
+                    ns = time_build(index, pairs)
+                    writer.record(
+                        index, **common, operation="build", operation_param="",
+                        n_ops=n, total_ns=ns,
+                        height=index.structure_info().get("height", ""),
+                    )
+
+                    index.reset_stats()
+                    ns = time_batch(index.search, queries)
+                    writer.record(
+                        index, **common, operation="point_hit", operation_param=1.0,
+                        n_ops=len(queries), total_ns=ns,
+                        height=index.structure_info().get("height", ""),
+                    )
+                print(f"  E5 n={n:>7,} {order:<13} {name:<14} done", flush=True)
+
+
 # Register experiments here: name -> function(writer, tracks, reps).
+
 EXPERIMENTS: dict[str, Callable[[ResultsWriter, list[dict], int], None]] = {
     "example": example_point_lookups,
+    "E1_build_memory": E1_build_memory,
     "E2_point_lookups": E2_point_lookups,
+    "E5_insert_order": E5_insert_order,
 }
 
 
