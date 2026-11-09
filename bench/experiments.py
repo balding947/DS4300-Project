@@ -26,7 +26,7 @@ from typing import Callable, Optional, Sequence
 from bench.cli import parse, parser, writer_from_args
 from bench.results import ResultsWriter
 from bench.timing import build_memory_bytes, time_batch, time_build
-from datagen.synthetic import arrange, point_queries, random_keys
+from datagen.synthetic import arrange, point_queries, prefix_queries, random_keys
 from indexes import ALL_INDEXES, make_index
 from loaders.spotify import key_value_pairs, load_tracks
 
@@ -178,12 +178,61 @@ def E5_insert_order(writer: ResultsWriter, tracks: list[dict], reps: int) -> Non
                 print(f"  E5 n={n:>7,} {order:<13} {name:<14} done", flush=True)
 
 
+E4_PREFIX_LENGTHS = (1, 2, 3, 4, 5)
+E4_N_QUERIES = 500
+
+
+def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
+    """Prefix-search cost on track_name (all rows, file order) for prefix lengths 1-5."""
+    pairs = key_value_pairs(tracks, "track_name")  # file order; casefolded, the one empty name skipped
+    n = len(pairs)
+    keys = [key for key, _ in pairs]
+
+    # One query list per prefix length, generated before any timer starts.
+    # Every index and every replicate sees the same queries.
+    queries_by_length = {
+        length: prefix_queries(keys, E4_N_QUERIES, length, seed=SEED + length)
+        for length in E4_PREFIX_LENGTHS
+    }
+
+    # Short prefixes match far more rows, and every match has to be copied into the
+    # result, so record the average result size next to each row (computed untimed,
+    # with the C-backed bisect reference, which returns the same answers).
+    reference = make_index("ref_bisect")
+    for key, value in pairs:
+        reference.insert(key, value)
+    avg_matches = {
+        length: sum(len(reference.prefix_search(q)) for q in queries) / len(queries)
+        for length, queries in queries_by_length.items()
+    }
+
+    for name in ALL_INDEXES:
+        for rep in range(reps):
+            index = make_index(name)  # fresh index every replicate
+            for key, value in pairs:  # build is NOT timed here (E1 measures build)
+                index.insert(key, value)
+
+            for length, queries in queries_by_length.items():
+                index.reset_stats()  # zero the counters so this batch's counts are its own
+                ns = time_batch(index.prefix_search, queries)
+                writer.record(
+                    index,
+                    experiment="E4_prefix_track_name", dataset="spotify", key_column="track_name",
+                    insert_order="file", n_keys=n, operation="prefix", operation_param=length,
+                    n_ops=len(queries), rep=rep, total_ns=ns,
+                    height=index.structure_info().get("height", ""),
+                    notes=f"avg_matches={avg_matches[length]:.1f}",
+                )
+        print(f"  E4 {name:<14} done", flush=True)
+
+
 # Register experiments here: name -> function(writer, tracks, reps).
 
 EXPERIMENTS: dict[str, Callable[[ResultsWriter, list[dict], int], None]] = {
     "example": example_point_lookups,
     "E1_build_memory": E1_build_memory,
     "E2_point_lookups": E2_point_lookups,
+    "E4_prefix_track_name": E4_prefix_track_name,
     "E5_insert_order": E5_insert_order,
 }
 
