@@ -51,11 +51,14 @@ class SortedListIndex(Index):
         self._size += 1
 
     def search(self, key: Any) -> list[Any]:
-        # The keys are sorted, so binary search jumps straight to the only
-        # place ``key`` could be (O(log n)), the same way ``insert`` does.
         pos = self._bisect_left(key)
-        if pos < len(self._keys) and self._keys[pos] == key:
-            return self._values[pos]
+
+        if pos < len(self._keys):
+            self.stats.comparisons += 1
+
+            if self._keys[pos] == key:
+                return self._values[pos]
+
         return []
 
     def range_search(self, lo: Any, hi: Any) -> list[Any]:
