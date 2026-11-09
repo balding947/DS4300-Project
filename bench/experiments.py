@@ -22,13 +22,20 @@ from __future__ import annotations
 import random
 import time
 from typing import Callable, Optional, Sequence
-
+from bisect import bisect_left, bisect_right
 from bench.cli import parse, parser, writer_from_args
 from bench.results import ResultsWriter
 from bench.timing import build_memory_bytes, time_batch, time_build
-from datagen.synthetic import arrange, point_queries, prefix_queries, random_keys
+from datagen.synthetic import (
+    arrange,
+    point_queries,
+    prefix_queries,
+    random_keys,
+    range_queries,
+)
 from indexes import ALL_INDEXES, make_index
 from loaders.spotify import key_value_pairs, load_tracks
+from indexes.base import PREFIX_UPPER_BOUND
 
 SEED = 4300
 
@@ -181,6 +188,149 @@ def E5_insert_order(writer: ResultsWriter, tracks: list[dict], reps: int) -> Non
 E4_PREFIX_LENGTHS = (1, 2, 3, 4, 5)
 E4_N_QUERIES = 500
 
+RANGE_SELECTIVITIES = (0.0001, 0.001, 0.01, 0.05, 0.1, 0.25)
+RANGE_N_QUERIES = 200
+PREFIX_N_QUERIES = 500
+BPLUS_ORDERS = (3, 4, 8, 16, 32, 64, 128, 256, 512)
+
+
+def _range_workloads(pairs):
+    """Prepare the same range workloads for E3 and E6 outside timers."""
+    keys = [key for key, _ in pairs]
+    sorted_rows = sorted(keys)
+    distinct_count = len(set(keys))
+    workloads = {}
+
+    for selectivity in RANGE_SELECTIVITIES:
+        queries = range_queries(
+            keys,
+            RANGE_N_QUERIES,
+            selectivity,
+            seed=SEED,
+        )
+
+        mean_rows = sum(
+            bisect_right(sorted_rows, hi)
+            - bisect_left(sorted_rows, lo)
+            for lo, hi in queries
+        ) / len(queries)
+
+        notes = (
+            f"seed={SEED}; distinct_keys={distinct_count}; "
+            f"distinct_keys_per_range="
+            f"{max(1, round(selectivity * distinct_count))}; "
+            f"mean_rows_returned={mean_rows:.3f}"
+        )
+
+        workloads[selectivity] = queries, notes
+
+    return workloads
+
+
+def E3_range_tempo(
+    writer: ResultsWriter,
+    tracks: list[dict],
+    reps: int,
+) -> None:
+    """Range-query cost across six tempo selectivities."""
+    pairs = key_value_pairs(tracks, "tempo")
+    workloads = _range_workloads(pairs)
+
+    for name in ALL_INDEXES:
+        for rep in range(reps):
+            index = make_index(name)
+
+            for key, value in pairs:
+                index.insert(key, value)
+
+            height = index.structure_info().get("height", "")
+
+            for selectivity, (queries, notes) in workloads.items():
+                index.reset_stats()
+
+                ns = time_batch(
+                    lambda q: index.range_search(*q),
+                    queries,
+                )
+
+                writer.record(
+                    index,
+                    experiment="E3_range_tempo",
+                    dataset="spotify",
+                    key_column="tempo",
+                    insert_order="file",
+                    n_keys=len(pairs),
+                    operation="range",
+                    operation_param=selectivity,
+                    n_ops=len(queries),
+                    rep=rep,
+                    total_ns=ns,
+                    height=height,
+                    notes=notes,
+                )
+
+        print(f"  E3 {name:<14} done", flush=True)
+
+def E4_prefix_titles(
+    writer: ResultsWriter,
+    tracks: list[dict],
+    reps: int,
+) -> None:
+    """Prefix-query cost for title prefix lengths 1 through 5."""
+    pairs = key_value_pairs(tracks, "track_name")
+    keys = [key for key, _ in pairs]
+    sorted_rows = sorted(keys)
+    workloads = {}
+
+    for length in range(1, 6):
+        queries = prefix_queries(
+            keys,
+            PREFIX_N_QUERIES,
+            length,
+            seed=SEED,
+        )
+
+        mean_rows = sum(
+            bisect_right(sorted_rows, p + PREFIX_UPPER_BOUND)
+            - bisect_left(sorted_rows, p)
+            for p in queries
+        ) / len(queries)
+
+        workloads[length] = (
+            queries,
+            f"seed={SEED}; mean_rows_returned={mean_rows:.3f}",
+        )
+
+    for name in ALL_INDEXES:
+        for rep in range(reps):
+            index = make_index(name)
+
+            for key, value in pairs:
+                index.insert(key, value)
+
+            height = index.structure_info().get("height", "")
+
+            for length, (queries, notes) in workloads.items():
+                index.reset_stats()
+                ns = time_batch(index.prefix_search, queries)
+
+                writer.record(
+                    index,
+                    experiment="E4_prefix_titles",
+                    dataset="spotify",
+                    key_column="track_name",
+                    insert_order="file",
+                    n_keys=len(pairs),
+                    operation="prefix",
+                    operation_param=length,
+                    n_ops=len(queries),
+                    rep=rep,
+                    total_ns=ns,
+                    height=height,
+                    notes=notes,
+                )
+
+        print(f"  E4 {name:<14} done", flush=True)
 
 def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
     """Prefix-search cost on track_name (all rows, file order) for prefix lengths 1-5."""
@@ -225,15 +375,125 @@ def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -
                 )
         print(f"  E4 {name:<14} done", flush=True)
 
+def E6_bplus_order(
+    writer: ResultsWriter,
+    tracks: list[dict],
+    reps: int,
+) -> None:
+    """Compare nine B+ orders for builds, hits, misses, and ranges."""
+    id_pairs = key_value_pairs(tracks, "track_id")
+    point_workloads = {}
+
+    for n in E2_SIZES:
+        subset = id_pairs[:n]
+        keys = [key for key, _ in subset]
+
+        queries_by_rate = {
+            rate: point_queries(
+                keys,
+                E2_N_QUERIES,
+                rate,
+                seed=SEED + n,
+            )
+            for rate in (1.0, 0.0)
+        }
+
+        point_workloads[n] = subset, queries_by_rate
+
+    tempo_pairs = key_value_pairs(tracks, "tempo")
+    ranges, range_notes = _range_workloads(tempo_pairs)[0.01]
+
+    for order in BPLUS_ORDERS:
+        for n, (subset, queries_by_rate) in point_workloads.items():
+            for rep in range(reps):
+                common = dict(
+                    experiment="E6_bplus_order",
+                    dataset="spotify",
+                    key_column="track_id",
+                    insert_order="file",
+                    n_keys=len(subset),
+                    rep=rep,
+                    notes=f"seed={SEED + n}",
+                )
+
+                index = make_index("bplus_tree", order=order)
+                index.reset_stats()
+
+                ns = time_build(index, subset)
+                height = index.structure_info()["height"]
+
+                writer.record(
+                    index,
+                    **common,
+                    operation="build",
+                    operation_param="",
+                    n_ops=len(subset),
+                    total_ns=ns,
+                    height=height,
+                )
+
+                for rate, queries in queries_by_rate.items():
+                    index.reset_stats()
+                    ns = time_batch(index.search, queries)
+
+                    writer.record(
+                        index,
+                        **common,
+                        operation=(
+                            "point_hit" if rate == 1.0 else "point_miss"
+                        ),
+                        operation_param=rate,
+                        n_ops=len(queries),
+                        total_ns=ns,
+                        height=height,
+                    )
+
+        for rep in range(reps):
+            index = make_index("bplus_tree", order=order)
+
+            for key, value in tempo_pairs:
+                index.insert(key, value)
+
+            height = index.structure_info()["height"]
+            index.reset_stats()
+
+            ns = time_batch(
+                lambda q: index.range_search(*q),
+                ranges,
+            )
+
+            writer.record(
+                index,
+                experiment="E6_bplus_order",
+                dataset="spotify",
+                key_column="tempo",
+                insert_order="file",
+                n_keys=len(tempo_pairs),
+                operation="range",
+                operation_param=0.01,
+                n_ops=len(ranges),
+                rep=rep,
+                total_ns=ns,
+                height=height,
+                notes=range_notes,
+            )
+
+        print(f"  E6 order={order:<3} done", flush=True)
+
 
 # Register experiments here: name -> function(writer, tracks, reps).
 
-EXPERIMENTS: dict[str, Callable[[ResultsWriter, list[dict], int], None]] = {
+EXPERIMENTS: dict[
+    str,
+    Callable[[ResultsWriter, list[dict], int], None],
+] = {
     "example": example_point_lookups,
     "E1_build_memory": E1_build_memory,
     "E2_point_lookups": E2_point_lookups,
-    "E4_prefix_track_name": E4_prefix_track_name,
+    "E3_range_tempo": E3_range_tempo,
+    "E4_prefix_titles": E4_prefix_titles,
     "E5_insert_order": E5_insert_order,
+    "E6_bplus_order": E6_bplus_order,
 }
 
 
