@@ -51,7 +51,7 @@ The table uses actual saved E3 rows on oscar-omen, all 114,000 tempo pairs, orde
 
 ## Root cause
 
-In the pre-fix `indexes/bplus_tree.py`, `range_search` calls `_collect_range(self._root, ...)`. `_collect_range` visits every child without using separator keys to prune or the leaf chain to restrict the interval. It appends the right values in order, so correctness tests pass, but narrow queries still scan the whole tree.
+At pre-fix commit `fa70927`, `indexes/bplus_tree.py` lines 173–177 define `range_search`, which calls `_collect_range(self._root, ...)`. The helper at lines 179–189 visits every child without using separator keys to prune or the leaf chain to restrict the interval. It appends the correct values in order, so correctness tests pass, but narrow queries still scan the whole tree.
 
 ## Fix
 
@@ -118,7 +118,7 @@ The baseline and final rows have identical workload notes, seed 4300, file inser
 
 Reported Docker correctness check after the E4 cleanup: `docker compose run --rm app python -m pytest` returned **168 passed, 3 skipped in 6.49s**. The full correctness run covers the shared index APIs, including range and prefix behavior. The clean `E4_prefix_track_name` benchmark is also present at `584f39d`, session `ae1818345523`, with all 175 rows. Prefix performance should be analyzed using that retained experiment.
 
-The updated E3 notebook selects the exact clean E3 sessions above and saves their comparison figure with outputs. The E6 notebook uses clean session `7e671042e940` at `584f39d`. Historical measurements and source labels remain unchanged.
+The E3 notebook was re-executed using clean baseline `fa70927`, session `52bd18a23120`, and clean final version `584f39d`, session `56a7e705caf6`. Its saved outputs include the comparison figure exported to `report/figures/e3/E3_Bplus_before_after.png`. The E6 notebook was re-executed using clean version `584f39d`, session `7e671042e940`, with outputs saved. Historical measurements and source labels remain unchanged.
 
 ## Impact on recommendations
 

@@ -28,7 +28,7 @@ Machine: `oscar-omen`. Before: `fa70927`, session `39da8fbcc1b3`. After: `584f39
 
 ![Hash-table build time and resize counts before and after geometric growth](../report/figures/incidents/INC-03_hash_build_before_after.png)
 
-*Figure INC-03. Geometric growth removes the steep increase in large-build time and reduces growth events. Lines show medians; the timing band shows Q25–Q75. Source: the clean E1 sessions above. The summary is also saved in `report/tables/incidents/INC-03_hash_build_before_after.csv`.*
+*Figure INC-03. Geometric growth removes the steep increase in large-build time and reduces growth events. Lines show medians; the timing band shows Q25–Q75. Source: the main code cell in `analysis/INC03_hash_growth.ipynb`, using the clean E1 sessions above. *
 
 ### Historical measurements
 
