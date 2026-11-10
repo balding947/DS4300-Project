@@ -54,22 +54,35 @@ def example_point_lookups(writer: ResultsWriter, tracks: list[dict], reps: int) 
 
             for rep in range(reps):
                 common = dict(
-                    experiment="example", dataset="spotify", key_column="track_id",
-                    insert_order="file", n_keys=n, rep=rep,
+                    experiment="example",
+                    dataset="spotify",
+                    key_column="track_id",
+                    insert_order="file",
+                    n_keys=n,
+                    rep=rep,
                 )
 
                 index = make_index(name)
                 ns = time_build(index, subset)
                 writer.record(
-                    index, **common, operation="build", operation_param="",
-                    n_ops=n, total_ns=ns, memory_bytes=memory,
+                    index,
+                    **common,
+                    operation="build",
+                    operation_param="",
+                    n_ops=n,
+                    total_ns=ns,
+                    memory_bytes=memory,
                 )
 
                 index.reset_stats()
                 ns = time_batch(index.search, queries)
                 writer.record(
-                    index, **common, operation="point_hit", operation_param=1.0,
-                    n_ops=len(queries), total_ns=ns,
+                    index,
+                    **common,
+                    operation="point_hit",
+                    operation_param=1.0,
+                    n_ops=len(queries),
+                    total_ns=ns,
                     height=index.structure_info().get("height", ""),
                 )
             print(f"  n={n:>7,}  {name:<14} done", flush=True)
@@ -106,14 +119,19 @@ def E2_point_lookups(writer: ResultsWriter, tracks: list[dict], reps: int) -> No
                     ns = time_batch(index.search, queries)
                     writer.record(
                         index,
-                        experiment="E2_point_lookups", dataset="spotify", key_column="track_id",
-                        insert_order="file", n_keys=n,
+                        experiment="E2_point_lookups",
+                        dataset="spotify",
+                        key_column="track_id",
+                        insert_order="file",
+                        n_keys=n,
                         operation="point_hit" if rate == 1.0 else "point_miss",
-                        operation_param=rate, n_ops=len(queries), rep=rep, total_ns=ns,
+                        operation_param=rate,
+                        n_ops=len(queries),
+                        rep=rep,
+                        total_ns=ns,
                         height=index.structure_info().get("height", ""),
                     )
             print(f"  E2 n={n:>7,}  {name:<14} done", flush=True)
-
 
 
 E1_SIZES = (1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 114_000)
@@ -135,9 +153,17 @@ def E1_build_memory(writer: ResultsWriter, tracks: list[dict], reps: int) -> Non
                 ns = time_build(index, subset)
                 writer.record(
                     index,
-                    experiment="E1_build_memory", dataset="spotify", key_column="track_id",
-                    insert_order="file", n_keys=n, operation="build", operation_param="",
-                    n_ops=n, rep=rep, total_ns=ns, memory_bytes=memory,
+                    experiment="E1_build_memory",
+                    dataset="spotify",
+                    key_column="track_id",
+                    insert_order="file",
+                    n_keys=n,
+                    operation="build",
+                    operation_param="",
+                    n_ops=n,
+                    rep=rep,
+                    total_ns=ns,
+                    memory_bytes=memory,
                     height=index.structure_info().get("height", ""),
                 )
             print(f"  E1 n={n:>7,}  {name:<14} done", flush=True)
@@ -162,23 +188,35 @@ def E5_insert_order(writer: ResultsWriter, tracks: list[dict], reps: int) -> Non
             for name in ALL_INDEXES:
                 for rep in range(reps):
                     common = dict(
-                        experiment="E5_insert_order", dataset="synthetic",
-                        key_column="random_str8", insert_order=order, n_keys=n, rep=rep,
+                        experiment="E5_insert_order",
+                        dataset="synthetic",
+                        key_column="random_str8",
+                        insert_order=order,
+                        n_keys=n,
+                        rep=rep,
                     )
 
                     index = make_index(name)  # fresh index every replicate
                     ns = time_build(index, pairs)
                     writer.record(
-                        index, **common, operation="build", operation_param="",
-                        n_ops=n, total_ns=ns,
+                        index,
+                        **common,
+                        operation="build",
+                        operation_param="",
+                        n_ops=n,
+                        total_ns=ns,
                         height=index.structure_info().get("height", ""),
                     )
 
                     index.reset_stats()
                     ns = time_batch(index.search, queries)
                     writer.record(
-                        index, **common, operation="point_hit", operation_param=1.0,
-                        n_ops=len(queries), total_ns=ns,
+                        index,
+                        **common,
+                        operation="point_hit",
+                        operation_param=1.0,
+                        n_ops=len(queries),
+                        total_ns=ns,
                         height=index.structure_info().get("height", ""),
                     )
                 print(f"  E5 n={n:>7,} {order:<13} {name:<14} done", flush=True)
@@ -208,8 +246,7 @@ def _range_workloads(pairs):
         )
 
         mean_rows = sum(
-            bisect_right(sorted_rows, hi)
-            - bisect_left(sorted_rows, lo)
+            bisect_right(sorted_rows, hi) - bisect_left(sorted_rows, lo)
             for lo, hi in queries
         ) / len(queries)
 
@@ -269,9 +306,12 @@ def E3_range_tempo(
 
         print(f"  E3 {name:<14} done", flush=True)
 
+
 def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
     """Prefix-search cost on track_name (all rows, file order) for prefix lengths 1-5."""
-    pairs = key_value_pairs(tracks, "track_name")  # file order; casefolded, the one empty name skipped
+    pairs = key_value_pairs(
+        tracks, "track_name"
+    )  # file order; casefolded, the one empty name skipped
     n = len(pairs)
     keys = [key for key, _ in pairs]
 
@@ -304,13 +344,21 @@ def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -
                 ns = time_batch(index.prefix_search, queries)
                 writer.record(
                     index,
-                    experiment="E4_prefix_track_name", dataset="spotify", key_column="track_name",
-                    insert_order="file", n_keys=n, operation="prefix", operation_param=length,
-                    n_ops=len(queries), rep=rep, total_ns=ns,
+                    experiment="E4_prefix_track_name",
+                    dataset="spotify",
+                    key_column="track_name",
+                    insert_order="file",
+                    n_keys=n,
+                    operation="prefix",
+                    operation_param=length,
+                    n_ops=len(queries),
+                    rep=rep,
+                    total_ns=ns,
                     height=index.structure_info().get("height", ""),
                     notes=f"avg_matches={avg_matches[length]:.1f}",
                 )
         print(f"  E4 {name:<14} done", flush=True)
+
 
 def E6_bplus_order(
     writer: ResultsWriter,
@@ -376,9 +424,7 @@ def E6_bplus_order(
                     writer.record(
                         index,
                         **common,
-                        operation=(
-                            "point_hit" if rate == 1.0 else "point_miss"
-                        ),
+                        operation=("point_hit" if rate == 1.0 else "point_miss"),
                         operation_param=rate,
                         n_ops=len(queries),
                         total_ns=ns,
@@ -418,6 +464,90 @@ def E6_bplus_order(
         print(f"  E6 order={order:<3} done", flush=True)
 
 
+# About 1.3, 1,129 and 1,000 rows share each key in these three columns.
+E7_COLUMNS = ("track_id", "popularity", "track_genre")
+E7_N_POINT_QUERIES = 500
+E7_N_RANGE_QUERIES = 200
+E7_RANGE_SELECTIVITIES = (0.01, 0.1, 0.25)
+
+
+def E7_duplicate_keys(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
+    """Build, point-lookup (hit) and range cost when many rows share a key."""
+    for column in E7_COLUMNS:
+        pairs = key_value_pairs(tracks, column)  # file order, all 114,000 rows
+        n = len(pairs)
+        keys = [key for key, _ in pairs]
+        distinct = len(set(keys))
+        notes = f"distinct_keys={distinct}; rows_per_key={n / distinct:.1f}"
+
+        # point_queries builds its miss strings from the keys' characters, which fails for
+        # integer keys like popularity, so draw the hits directly: random existing keys.
+        # Every index and every replicate sees the same queries.
+        rng = random.Random(SEED)
+        hits = [rng.choice(keys) for _ in range(E7_N_POINT_QUERIES)]
+
+        # Ranges only on popularity (the one ordered numeric column with few distinct keys).
+        ranges_by_selectivity = {}
+        if column == "popularity":
+            ranges_by_selectivity = {
+                selectivity: range_queries(
+                    keys, E7_N_RANGE_QUERIES, selectivity, seed=SEED
+                )
+                for selectivity in E7_RANGE_SELECTIVITIES
+            }
+
+        for name in ALL_INDEXES:
+            for rep in range(reps):
+                common = dict(
+                    experiment="E7_duplicate_keys",
+                    dataset="spotify",
+                    key_column=column,
+                    insert_order="file",
+                    n_keys=n,
+                    rep=rep,
+                    notes=notes,
+                )
+
+                index = make_index(name)  # fresh index every replicate
+                ns = time_build(index, pairs)
+                height = index.structure_info().get("height", "")
+                writer.record(
+                    index,
+                    **common,
+                    operation="build",
+                    operation_param="",
+                    n_ops=n,
+                    total_ns=ns,
+                    height=height,
+                )
+
+                index.reset_stats()  # zero the counters so this batch's counts are its own
+                ns = time_batch(index.search, hits)
+                writer.record(
+                    index,
+                    **common,
+                    operation="point_hit",
+                    operation_param=1.0,
+                    n_ops=len(hits),
+                    total_ns=ns,
+                    height=height,
+                )
+
+                for selectivity, queries in ranges_by_selectivity.items():
+                    index.reset_stats()
+                    ns = time_batch(lambda q: index.range_search(*q), queries)
+                    writer.record(
+                        index,
+                        **common,
+                        operation="range",
+                        operation_param=selectivity,
+                        n_ops=len(queries),
+                        total_ns=ns,
+                        height=height,
+                    )
+            print(f"  E7 {column:<12} {name:<14} done", flush=True)
+
+
 # Register experiments here: name -> function(writer, tracks, reps).
 
 EXPERIMENTS: dict[
@@ -431,12 +561,15 @@ EXPERIMENTS: dict[
     "E4_prefix_track_name": E4_prefix_track_name,
     "E5_insert_order": E5_insert_order,
     "E6_bplus_order": E6_bplus_order,
+    "E7_duplicate_keys": E7_duplicate_keys,
 }
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
     p = parser("Run your experiments.")
-    p.add_argument("--only", choices=sorted(EXPERIMENTS), help="run just this experiment")
+    p.add_argument(
+        "--only", choices=sorted(EXPERIMENTS), help="run just this experiment"
+    )
     args = parse(p, argv)
     writer = writer_from_args(args)
     tracks = load_tracks()
