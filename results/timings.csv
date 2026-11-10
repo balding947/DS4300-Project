@@ -7394,7 +7394,6 @@ af5ec8eab10b,2026-11-09T22:59:38+00:00,oscarpeng,oscar-omen,bc253d0-dirty,3.13.1
 af5ec8eab10b,2026-11-09T22:59:38+00:00,oscarpeng,oscar-omen,bc253d0-dirty,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,CORE,spotify,track_id,file,114000,point_miss,,1000,4,661556,ref_bisect,,,,,,,,,
 af5ec8eab10b,2026-11-09T22:59:39+00:00,oscarpeng,oscar-omen,bc253d0-dirty,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,CORE,spotify,tempo,file,114000,range,0.01,200,4,13872666,ref_bisect,,,,,,,,,
 af5ec8eab10b,2026-11-09T22:59:40+00:00,oscarpeng,oscar-omen,bc253d0-dirty,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,CORE,spotify,track_name,file,113999,prefix,3,200,4,8923036,ref_bisect,,,,,,,,,
-<<<<<<< HEAD
 39da8fbcc1b3,2026-11-10T04:52:15+00:00,oscarpeng,oscar-omen,fa70927,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,E1_build_memory,spotify,track_id,file,1000,build,,1000,0,346190,unsorted_list,,0,0,0,0,0,,65664,
 39da8fbcc1b3,2026-11-10T04:52:15+00:00,oscarpeng,oscar-omen,fa70927,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,E1_build_memory,spotify,track_id,file,1000,build,,1000,1,200838,unsorted_list,,0,0,0,0,0,,65664,
 39da8fbcc1b3,2026-11-10T04:52:15+00:00,oscarpeng,oscar-omen,fa70927,3.13.18,Linux 6.6.87.2-microsoft-standard-WSL2,x86_64,Intel(R) Core(TM) Ultra 7 155H,22,7.47,True,0,E1_build_memory,spotify,track_id,file,1000,build,,1000,2,179635,unsorted_list,,0,0,0,0,0,,65664,
@@ -12410,7 +12409,6 @@ a9a62ee605d5,2026-11-10T15:39:39+00:00,ike,ike-mba,c2b371c,3.13.18,Linux 7.0.14-
 a9a62ee605d5,2026-11-10T15:39:39+00:00,ike,ike-mba,c2b371c,3.13.18,Linux 7.0.14-linuxkit,aarch64,unknown,10,7.75,True,0,E4_prefix_track_name,spotify,track_name,file,113999,prefix,3,500,4,3809875,ref_bisect,,,,,,,,,avg_matches=256.9
 a9a62ee605d5,2026-11-10T15:39:39+00:00,ike,ike-mba,c2b371c,3.13.18,Linux 7.0.14-linuxkit,aarch64,unknown,10,7.75,True,0,E4_prefix_track_name,spotify,track_name,file,113999,prefix,4,500,4,2551792,ref_bisect,,,,,,,,,avg_matches=163.9
 a9a62ee605d5,2026-11-10T15:39:39+00:00,ike,ike-mba,c2b371c,3.13.18,Linux 7.0.14-linuxkit,aarch64,unknown,10,7.75,True,0,E4_prefix_track_name,spotify,track_name,file,113999,prefix,5,500,4,1383917,ref_bisect,,,,,,,,,avg_matches=51.4
-=======
 0e28a50ffa34,2026-11-09T23:08:16+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,10000,build,,10000,0,1449458,unsorted_list,,0,0,0,0,0,,,
 0e28a50ffa34,2026-11-09T23:08:16+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,114000,build,,114000,0,19982375,unsorted_list,,0,0,0,0,0,,,
 0e28a50ffa34,2026-11-09T23:08:19+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,114000,point_hit,,1000,0,3464429627,unsorted_list,,114000000,0,0,0,0,,,
@@ -12621,7 +12619,6 @@ a9a62ee605d5,2026-11-10T15:39:39+00:00,ike,ike-mba,c2b371c,3.13.18,Linux 7.0.14-
 0e28a50ffa34,2026-11-09T23:10:41+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,114000,point_miss,,1000,4,520792,ref_bisect,,,,,,,,,
 0e28a50ffa34,2026-11-09T23:10:42+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,tempo,file,114000,range,0.01,200,4,6120167,ref_bisect,,,,,,,,,
 0e28a50ffa34,2026-11-09T23:10:43+00:00,vivian,vivian-mbp,7190bd8,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_name,file,113999,prefix,3,200,4,2880917,ref_bisect,,,,,,,,,
->>>>>>> 92cb542 (Add earlier vivian-mbp runs)
 8f5eb8c35eff,2026-11-10T20:34:51+00:00,vivian,vivian-mbp,e7a1255,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,10000,build,,10000,0,1509750,unsorted_list,,0,0,0,0,0,,,
 8f5eb8c35eff,2026-11-10T20:34:51+00:00,vivian,vivian-mbp,e7a1255,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,114000,build,,114000,0,15586709,unsorted_list,,0,0,0,0,0,,,
 8f5eb8c35eff,2026-11-10T20:34:55+00:00,vivian,vivian-mbp,e7a1255,3.13.18,Linux 6.10.14-linuxkit,aarch64,unknown,8,7.65,True,0,CORE,spotify,track_id,file,114000,point_hit,,1000,0,3322887377,unsorted_list,,114000000,0,0,0,0,,,
