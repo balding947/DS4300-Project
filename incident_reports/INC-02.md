@@ -69,7 +69,7 @@ Commit: 7c43369
 
 ## Verification
 
-Same workload and seeds before and after (table above). The official `E2_point_lookups` run on ike-mba at `7c43369` (5 reps) agrees: at n = 114,000, 16.54 comparisons per hit and 16.06 per miss, with median 1.98 µs per hit and 1.25 µs per miss. Before the fix, zaid-mbp at `45879fa` measured 6,305 µs and 13,833 µs. `make test` after the fix: 168 passed, 3 skipped. E4 isn't affected: `prefix_search` goes through `range_search`, which already used `_bisect_left`.
+Same workload and seeds before and after (table above). The official `E2_point_lookups` run on ike-mba at `7c43369` (5 reps) agrees: at n = 114,000, 16.54 comparisons per hit and 16.06 per miss, with median 1.98 µs per hit and 1.25 µs per miss. Before the fix, zaid-mbp at `45879fa` measured 6,305 µs and 13,833 µs. `make test` after the fix: 168 passed, 3 skipped. Later, commit `bc253d0` also counts the final `== key` check in `search`, so rows from that commit on show up to one more comparison per lookup (about 17.5 per hit at n = 114,000). The search is still O(log n). E4 isn't affected: `prefix_search` goes through `range_search`, which already used `_bisect_left`.
 
 ## Impact on recommendations
 
