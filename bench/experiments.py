@@ -35,7 +35,6 @@ from datagen.synthetic import (
 )
 from indexes import ALL_INDEXES, make_index
 from loaders.spotify import key_value_pairs, load_tracks
-from indexes.base import PREFIX_UPPER_BOUND
 
 SEED = 4300
 
@@ -190,7 +189,6 @@ E4_N_QUERIES = 500
 
 RANGE_SELECTIVITIES = (0.0001, 0.001, 0.01, 0.05, 0.1, 0.25)
 RANGE_N_QUERIES = 200
-PREFIX_N_QUERIES = 500
 BPLUS_ORDERS = (3, 4, 8, 16, 32, 64, 128, 256, 512)
 
 
@@ -270,67 +268,6 @@ def E3_range_tempo(
                 )
 
         print(f"  E3 {name:<14} done", flush=True)
-
-def E4_prefix_titles(
-    writer: ResultsWriter,
-    tracks: list[dict],
-    reps: int,
-) -> None:
-    """Prefix-query cost for title prefix lengths 1 through 5."""
-    pairs = key_value_pairs(tracks, "track_name")
-    keys = [key for key, _ in pairs]
-    sorted_rows = sorted(keys)
-    workloads = {}
-
-    for length in range(1, 6):
-        queries = prefix_queries(
-            keys,
-            PREFIX_N_QUERIES,
-            length,
-            seed=SEED,
-        )
-
-        mean_rows = sum(
-            bisect_right(sorted_rows, p + PREFIX_UPPER_BOUND)
-            - bisect_left(sorted_rows, p)
-            for p in queries
-        ) / len(queries)
-
-        workloads[length] = (
-            queries,
-            f"seed={SEED}; mean_rows_returned={mean_rows:.3f}",
-        )
-
-    for name in ALL_INDEXES:
-        for rep in range(reps):
-            index = make_index(name)
-
-            for key, value in pairs:
-                index.insert(key, value)
-
-            height = index.structure_info().get("height", "")
-
-            for length, (queries, notes) in workloads.items():
-                index.reset_stats()
-                ns = time_batch(index.prefix_search, queries)
-
-                writer.record(
-                    index,
-                    experiment="E4_prefix_titles",
-                    dataset="spotify",
-                    key_column="track_name",
-                    insert_order="file",
-                    n_keys=len(pairs),
-                    operation="prefix",
-                    operation_param=length,
-                    n_ops=len(queries),
-                    rep=rep,
-                    total_ns=ns,
-                    height=height,
-                    notes=notes,
-                )
-
-        print(f"  E4 {name:<14} done", flush=True)
 
 def E4_prefix_track_name(writer: ResultsWriter, tracks: list[dict], reps: int) -> None:
     """Prefix-search cost on track_name (all rows, file order) for prefix lengths 1-5."""
@@ -491,7 +428,7 @@ EXPERIMENTS: dict[
     "E1_build_memory": E1_build_memory,
     "E2_point_lookups": E2_point_lookups,
     "E3_range_tempo": E3_range_tempo,
-    "E4_prefix_titles": E4_prefix_titles,
+    "E4_prefix_track_name": E4_prefix_track_name,
     "E5_insert_order": E5_insert_order,
     "E6_bplus_order": E6_bplus_order,
 }
