@@ -2,7 +2,7 @@
 
 ## Summary
 
-The hash table increased capacity by a fixed 1,024 buckets. Each growth rehashed every distinct key, making large builds much more expensive than expected. Changing capacity growth to doubling fixes the amortized behavior. In the recorded historical runs, the 114,000-pair median build time changes from 6,695.683 ms to 214.467 ms (31.22 times before/after), and resizes fall from 117 to 14.
+The hash table increased capacity by a fixed 1,024 buckets. Each growth rehashed every distinct key, making large builds much more expensive than expected. Changing capacity growth to doubling fixes the amortized behavior. In the clean verification runs, the 114,000-pair median build time changes from 6,217.307 ms to 208.138 ms (29.87 times before/after), and resizes fall from 117 to 14.
 
 ## Detection
 
@@ -11,6 +11,26 @@ Code review identified additive growth in `_grow`. The E1 build measurements con
 ## Expected vs. observed
 
 With geometric growth and a reasonable hash distribution, insertion has expected amortized O(1) work and a full build has expected O(n) work. With d distinct keys, the number of resizes should grow logarithmically. A fixed growth step instead produces repeated scans of an increasingly large table, giving quadratic total rehash work in d asymptotically.
+
+### Clean before/after measurements
+
+Machine: `oscar-omen`. Before: `fa70927`, session `39da8fbcc1b3`. After: `584f39d`, session `52cd11d6d84d`. Each configuration has five replicates. Times below are total build milliseconds, summarized by median and interquartile range; resize counts are per complete build.
+
+| Inserted pairs | Before build ms [Q25, Q75] | After build ms [Q25, Q75] | Resizes before | Resizes after |
+|---:|---:|---:|---:|---:|
+| 1,000 | 1.243 [1.177, 1.247] | 1.470 [1.406, 1.500] | 2 | 8 |
+| 2,000 | 2.517 [2.506, 2.696] | 2.610 [2.581, 2.800] | 3 | 9 |
+| 5,000 | 9.020 [9.004, 9.183] | 5.839 [5.641, 6.527] | 6 | 10 |
+| 10,000 | 35.332 [32.997, 35.756] | 14.060 [13.906, 14.552] | 13 | 11 |
+| 20,000 | 152.391 [135.256, 164.077] | 30.361 [28.536, 31.825] | 25 | 12 |
+| 50,000 | 1,363.242 [1,232.956, 1,365.024] | 94.858 [94.236, 104.781] | 58 | 13 |
+| 114,000 | 6,217.307 [5,847.464, 6,366.854] | 208.138 [203.479, 208.415] | 117 | 14 |
+
+![Hash-table build time and resize counts before and after geometric growth](../report/figures/incidents/INC-03_hash_build_before_after.png)
+
+*Figure INC-03. Geometric growth removes the steep increase in large-build time and reduces growth events. Lines show medians; the timing band shows Q25–Q75. Source: the clean E1 sessions above. The summary is also saved in `report/tables/incidents/INC-03_hash_build_before_after.csv`.*
+
+### Historical measurements
 
 The table uses actual saved E1 rows from oscar-omen: before `9598854-dirty`, after `bc253d0-dirty`, five replicates per configuration. Times are medians with interquartile ranges. These labels are historical dirty-source labels, not clean verification runs.
 
@@ -26,7 +46,7 @@ The table uses actual saved E1 rows from oscar-omen: before `9598854-dirty`, aft
 
 ## Evidence
 
-- Raw measurements: `results/timings.csv`, `experiment=E1_build_memory`, `index_type=hash_table`, `machine_id=oscar-omen`, with the two exact versions above.
+- Raw measurements: `results/timings.csv`, `experiment=E1_build_memory`, `index_type=hash_table`, `machine_id=oscar-omen`. The clean sessions are `39da8fbcc1b3` (`fa70927`) and `52cd11d6d84d` (`584f39d`); each contains 35 hash-table rows across seven sizes. Historical rows remain under their original labels.
 - Full-data added structure memory is 20.454 MiB before and 21.233 MiB after. The helper measures memory once per configuration and repeats the value in the timing rows; these are not five independent memory samples.
 - The resize counter measures expansion events. It does not count every key moved during rehashing; the code explains the extra work per event.
 
@@ -64,13 +84,15 @@ index d6de160..4c86d0d 100644
 
 ## Verification
 
-The historical before/after measurements above were recorded in Docker with five replicates, but both code-version labels end in `-dirty`. They therefore do not establish a fully reconstructed source snapshot.
+The clean E1 baseline is `fa70927`, session `39da8fbcc1b3` (2026-11-10 04:52:15–04:54:28 UTC); the final run is `584f39d`, session `52cd11d6d84d` (04:59:20–05:00:16 UTC). Both source labels are recorded without `-dirty`. Each session contains all 245 E1 rows: seven indexes, seven sizes, five distinct replicates, with no duplicate configuration/replicate rows.
 
-**TODO: clean verification.** After collecting clean before/after runs, add their exact code versions and session IDs, update or supplement the measured table, and record the actual Docker test result. Use the committed pre-fix revision `fa70927` for E1 and the agreed final fix revision for the after run. Keep the old measurement rows and labels unchanged.
+Both runs use the same machine, dataset, file insertion order, size grid and workload notes. The recorded environment is Docker, Python 3.13.18 and `PYTHONHASHSEED=0`. The full-size hash build has 117 resizes before and 14 after in every replicate. Added structure memory changes from 20.454 to 21.233 MiB, about 3.8% higher; the build-time ratio is 29.87. The small 1,000- and 2,000-pair builds do not improve in median time, so the benefit is workload dependent.
+
+Reported Docker correctness check after the E4 cleanup: `docker compose run --rm app python -m pytest` returned **168 passed, 3 skipped in 6.49s**. Historical rows and version labels remain unchanged.
 
 ## Impact on recommendations
 
-The recorded measurements make the fixed hash table a much stronger catalog-import candidate for F4. Doubling retains spare buckets, so the final build-time benefit must be weighed against E1 memory and the queries required by the catalog. A hash table still needs a full scan for range and prefix queries; the growth fix does not change that limitation.
+The clean measurements make the fixed hash table a much stronger catalog-import candidate for F4 at large sizes. Doubling retains spare buckets, so the final build-time benefit must be weighed against E1 memory and the queries required by the catalog. A hash table still needs a full scan for range and prefix queries; the growth fix does not change that limitation.
 
 ## Why the tests didn't catch it
 
