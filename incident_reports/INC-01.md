@@ -57,11 +57,11 @@ Commit: 4c0a6c4
 
 ## Verification
 
-Same workloads and seeds before and after (see the table above). make test after the fix: 168 passed, 3 skipped. <Add the CORE "after" comparison when it is run.>
+Same workloads and seeds before and after (see the table above). make test after the fix: 168 passed, 3 skipped. The after-fix CORE run on vivian-mbp (code versions 7190bd8 and e7a1255) completed on the fixed code, and make check passes.
 
 ## Impact on recommendations
 
-<Fill in after E1 and E2: did the buggy AVL's extra height and rotations make it look worse than the B+ tree on build or lookup cost? Would the ranking have changed?>
+Yes, it would have changed how the AVL tree looked. With the bug, the tree was too tall (height 21 against 16 after the fix, for 10,000 keys) and did about 15 times as many rotations, so it looked worse on build and lookup cost than it really is. After the fix, E5 shows the AVL tree stays balanced for every arrival order (height 17 to 20 at 100,000 keys) and looks up keys faster than the B+ tree (about 2,100 against 3,300 ns). It still loses to the B+ tree on build cost (about 3 times slower) and memory (115 against 80 bytes per pair), so it is not the recommended index for any feature, but the bug made the lookup gap look wider than it is.
 
 ## Why the tests didn't catch it
 
